@@ -4,6 +4,8 @@ adventure game.
 """
 from turtle import RawTurtle
 from gamelib import Game, GameElement
+import math
+import random
 
 
 class TurtleGameElement(GameElement):
@@ -93,6 +95,7 @@ class Home(TurtleGameElement):
         x, y = pos
         self.x = x
         self.y = y
+        self.__counter = 0
 
     @property
     def size(self) -> int:
@@ -212,10 +215,12 @@ class Enemy(TurtleGameElement):
     def __init__(self,
                  game: "TurtleAdventureGame",
                  size: int,
-                 color: str):
+                 color: str,
+                 speed: float):
         super().__init__(game)
         self.__size = size
         self.__color = color
+        self.__speed = speed
 
     @property
     def size(self) -> float:
@@ -230,6 +235,19 @@ class Enemy(TurtleGameElement):
         Get the color of the enemy
         """
         return self.__color
+    
+    @property
+    def speed(self) -> float:
+        """Return the speed of the enemy
+
+        Returns:
+            float: speed of the enemy
+        """
+        return self.__speed
+    
+    @speed.setter
+    def speed(self, new_speed: float):
+        self.__speed = new_speed
 
     def hits_player(self):
         """
@@ -240,6 +258,14 @@ class Enemy(TurtleGameElement):
             and
             (self.y - self.size/2 < self.game.player.y < self.y + self.size/2)
         )
+        
+    def generate_spawn_loca(self):
+        x = random.choice((0,self.game.canvas.winfo_width()))
+        y = random.choice((0,self.game.canvas.winfo_height()))
+        range_x = [(x,x+1), (0, self.game.canvas.winfo_width())]
+        range_y = [(y,y+1), (0, self.game.canvas.winfo_height())]
+        choose_index = random.randint(0,1)
+        return random.randrange(*range_x[choose_index]), random.randrange(*range_y[1-choose_index])
 
 
 # TODO
@@ -256,21 +282,104 @@ class DemoEnemy(Enemy):
     def __init__(self,
                  game: "TurtleAdventureGame",
                  size: int,
-                 color: str):
-        super().__init__(game, size, color)
+                 color: str = "green", 
+                 speed: float = 1):
+        super().__init__(game, size, color, speed)
+        self.__to_x = random.randrange(0, self.game.canvas.winfo_width())
+        self.__to_y = random.randrange(0, self.game.canvas.winfo_height())
 
     def create(self) -> None:
-        pass
+        pos = self.generate_spawn_loca()
+        self.__id = self.canvas.create_oval(0,0,0,0,fill=self.color)
+        self.x = pos[0]
+        self.y = pos[1]
+        self.render()
 
     def update(self) -> None:
-        pass
+        distance = math.sqrt((self.__to_x-self.x)**2 + (self.__to_y-self.y)**2)
+        self.x += self.speed * (self.__to_x-self.x) / distance
+        self.y += self.speed * (self.__to_y-self.y) / distance
+        if round(self.x) == round(self.__to_x) and round(self.y) == round(self.__to_y):
+            self.__to_x = random.randrange(0, self.game.canvas.winfo_width())
+            self.__to_y = random.randrange(0, self.game.canvas.winfo_height())
+        if self.hits_player():
+            self.game.game_over_lose()
+            
 
     def render(self) -> None:
-        pass
+        self.canvas.coords(self.__id, self.x-self.size/2, self.y -
+                            self.size/2, self.x+self.size, self.y+self.size)
 
     def delete(self) -> None:
-        pass
+        self.canvas.delete(self.__id)
+        
+class ChasingEnemy(Enemy):
+    """
+    Chasing enemy
+    """
 
+    def __init__(self,
+                 game: "TurtleAdventureGame",
+                 size: int,
+                 color: str, 
+                 speed: float = 1):
+        super().__init__(game, size, color, speed)
+
+    def create(self) -> None:
+        pos = self.generate_spawn_loca()
+        self.__id = self.canvas.create_oval(0,0,0,0,fill=self.color)
+        self.x = pos[0]
+        self.y = pos[1]
+        self.render()
+
+    def update(self) -> None:
+        distance = math.sqrt((self.game.player.x-self.x)**2 + (self.game.player.y-self.y)**2)
+        self.x += self.speed * (self.game.player.x-self.x) / distance
+        self.y += self.speed * (self.game.player.y-self.y) / distance
+        if self.hits_player():
+            self.game.game_over_lose()
+            
+
+    def render(self) -> None:
+        self.canvas.coords(self.__id, self.x-self.size/2, self.y -
+                            self.size/2, self.x+self.size, self.y+self.size)
+
+    def delete(self) -> None:
+        self.canvas.delete(self.__id)
+
+class FencingEnemy:
+    """
+    Chasing enemy
+    """
+
+    def __init__(self,
+                 game: "TurtleAdventureGame",
+                 size: int,
+                 color: str, 
+                 speed: float = 1):
+        super().__init__(game, size, color, speed)
+
+    def create(self) -> None:
+        pos = self.generate_spawn_loca()
+        self.__id = self.canvas.create_oval(0,0,0,0,fill=self.color)
+        self.x = pos[0]
+        self.y = pos[1]
+        self.render()
+
+    def update(self) -> None:
+        distance = math.sqrt((self.game.player.x-self.x)**2 + (self.game.player.y-self.y)**2)
+        self.x += self.speed * (self.game.player.x-self.x) / distance
+        self.y += self.speed * (self.game.player.y-self.y) / distance
+        if self.hits_player():
+            self.game.game_over_lose()
+            
+
+    def render(self) -> None:
+        self.canvas.coords(self.__id, self.x-self.size/2, self.y -
+                            self.size/2, self.x+self.size, self.y+self.size)
+
+    def delete(self) -> None:
+        self.canvas.delete(self.__id)
 
 # TODO
 # Complete the EnemyGenerator class by inserting code to generate enemies
@@ -289,9 +398,12 @@ class EnemyGenerator:
     def __init__(self, game: "TurtleAdventureGame", level: int):
         self.__game: TurtleAdventureGame = game
         self.__level: int = level
+        num = self.game.enemy_formula(self.__level)
+        dtime = 2000 / num
 
         # example
-        self.__game.after(100, self.create_enemy)
+        deltatime = round((80/99)**self.__level*100)
+        self.__game.after(math.floor(dtime)+1, self.create_enemy)
 
     @property
     def game(self) -> "TurtleAdventureGame":
@@ -311,10 +423,16 @@ class EnemyGenerator:
         """
         Create a new enemy, possibly based on the game level
         """
-        new_enemy = DemoEnemy(self.__game, 20, "red")
-        new_enemy.x = 100
-        new_enemy.y = 100
-        self.game.add_element(new_enemy)
+        if len(self.game.enemies) <= self.game.enemy_formula(self.__level):  
+            choose = random.randint(0,1)
+            if choose == 1:
+                new_enemy = DemoEnemy(self.__game, 20, "red", 3)
+            else:
+                new_enemy = ChasingEnemy(self.__game, 20, "green", 3)
+            new_enemy.x = 100
+            new_enemy.y = 100
+            self.game.add_enemy(new_enemy)
+            self.__game.after(1000, self.create_enemy)
 
 
 class TurtleAdventureGame(Game): # pylint: disable=too-many-ancestors
@@ -332,7 +450,7 @@ class TurtleAdventureGame(Game): # pylint: disable=too-many-ancestors
         self.home: Home
         self.enemies: list[Enemy] = []
         self.enemy_generator: EnemyGenerator
-        super().__init__(parent)
+        super().__init__(parent, 20)
 
     def init_game(self):
         self.canvas.config(width=self.screen_width, height=self.screen_height)
@@ -380,6 +498,18 @@ class TurtleAdventureGame(Game): # pylint: disable=too-many-ancestors
         font = ("Arial", 36, "bold")
         self.canvas.create_text(self.screen_width/2,
                                 self.screen_height/2,
-                                text="You Lose",
+                                text="Skill Issue",
                                 font=font,
                                 fill="red")
+        
+    @classmethod
+    def enemy_formula(cls, level:int):
+        return (99/80)**int(level)
+    
+    @classmethod
+    def fencing_formula(cls, level:int):
+        return math.log10(level + 1)*2.3 + 1
+    
+    @classmethod
+    def boss_formula(cls, level:int) -> bool:
+        return round(math.sin(level*math.pi/2*(math.log10(level + 1)/5))*10) == 10
