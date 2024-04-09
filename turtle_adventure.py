@@ -4,8 +4,10 @@ adventure game.
 """
 from turtle import RawTurtle
 from gamelib import Game, GameElement
+from math import floor
 import math
 import random
+
 
 
 class TurtleGameElement(GameElement):
@@ -299,7 +301,7 @@ class DemoEnemy(Enemy):
         distance = math.sqrt((self.__to_x-self.x)**2 + (self.__to_y-self.y)**2)
         self.x += self.speed * (self.__to_x-self.x) / distance
         self.y += self.speed * (self.__to_y-self.y) / distance
-        if round(self.x) == round(self.__to_x) and round(self.y) == round(self.__to_y):
+        if floor(self.x/self.speed/5) == floor(self.__to_x/self.speed/5) and floor(self.y/self.speed/5) == floor(self.__to_y/self.speed/5):
             self.__to_x = random.randrange(0, self.game.canvas.winfo_width())
             self.__to_y = random.randrange(0, self.game.canvas.winfo_height())
         if self.hits_player():
@@ -423,16 +425,19 @@ class EnemyGenerator:
         """
         Create a new enemy, possibly based on the game level
         """
+        if not self.game.is_started:
+            return
         if len(self.game.enemies) <= self.game.enemy_formula(self.__level):  
             choose = random.randint(0,1)
             if choose == 1:
                 new_enemy = DemoEnemy(self.__game, 20, "red", 3)
             else:
-                new_enemy = ChasingEnemy(self.__game, 20, "green", 3)
+                new_enemy = ChasingEnemy(self.__game, 20, "green", self.game.get_speed(self.__level))
             new_enemy.x = 100
             new_enemy.y = 100
             self.game.add_enemy(new_enemy)
-            self.__game.after(1000, self.create_enemy)
+            print(self.game.delta_time_formula(self.__level))
+            self.__game.after(self.game.delta_time_formula(self.__level), self.create_enemy)
 
 
 class TurtleAdventureGame(Game): # pylint: disable=too-many-ancestors
@@ -504,7 +509,7 @@ class TurtleAdventureGame(Game): # pylint: disable=too-many-ancestors
         
     @classmethod
     def enemy_formula(cls, level:int):
-        return (99/80)**int(level)
+        return 20 * math.log10(level + 1)
     
     @classmethod
     def fencing_formula(cls, level:int):
@@ -513,3 +518,15 @@ class TurtleAdventureGame(Game): # pylint: disable=too-many-ancestors
     @classmethod
     def boss_formula(cls, level:int) -> bool:
         return round(math.sin(level*math.pi/2*(math.log10(level + 1)/5))*10) == 10
+    
+    @classmethod
+    def delta_time_formula(cls, level:int) -> float:
+        print("enemy: ", cls.enemy_formula(level))
+        print("fencing: ", cls.fencing_formula(level))
+        a = cls.enemy_formula(level) + cls.fencing_formula(level)
+        print("A: ", a)
+        return round(5000 / a)
+    
+    @classmethod
+    def get_speed(cls, level):
+        return (1.07)**(-level + 9) + 1.2
