@@ -9,6 +9,7 @@ import math
 import random
 
 
+
 class TurtleGameElement(GameElement):
     """
     An abstract class representing all game elemnets related to the Turtle's
@@ -572,6 +573,8 @@ class EnemyGenerator:
         """
         Create a new enemy, possibly based on the game level
         """
+        if not self.game.is_started:
+            return
         if len(self.game.enemies) <= self.game.enemy_formula(self.__level):  
             choose = random.randint(0,1)
             if choose == 1:
@@ -587,7 +590,7 @@ class EnemyGenerator:
         if len(self.game.boss_enemies) <= self.game.boss_formula(self.__level):
             new_enemy = BossEnemy(self.__game, 20, "black", 2)
             self.game.add_enemy(new_enemy)
-        self.__game.after(10, self.create_enemy)
+        self.__game.after(self.game.delta_time_formula(self.__level), self.create_enemy)
 
 
 class TurtleAdventureGame(Game): # pylint: disable=too-many-ancestors
@@ -673,7 +676,7 @@ class TurtleAdventureGame(Game): # pylint: disable=too-many-ancestors
                 
     @classmethod
     def enemy_formula(cls, level:int):
-        return (99/80)**int(level)
+        return 20 * math.log10(level + 1)
     
     @classmethod
     def fencing_formula(cls, level:int):
@@ -682,3 +685,15 @@ class TurtleAdventureGame(Game): # pylint: disable=too-many-ancestors
     @classmethod
     def boss_formula(cls, level:int) -> bool:
         return round(math.sin(level*math.pi/2*(math.log10(level + 1)/5))*10) == 10
+    
+    @classmethod
+    def delta_time_formula(cls, level:int) -> float:
+        print("enemy: ", cls.enemy_formula(level))
+        print("fencing: ", cls.fencing_formula(level))
+        a = cls.enemy_formula(level) + cls.fencing_formula(level)
+        print("A: ", a)
+        return round(5000 / a)
+    
+    @classmethod
+    def get_speed(cls, level):
+        return (1.07)**(-level + 9) + 1.2
