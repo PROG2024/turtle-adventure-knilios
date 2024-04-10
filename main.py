@@ -14,7 +14,7 @@ if __name__ == "__main__":
     root.title("Turtle's Adventure")
     root.geometry(f"{SCREEN_WIDTH}x{SCREEN_HEIGHT}")
     root.resizable(False, False) # games usually have fixed window size
-    # Level with boss: 6, 40
-    game = TurtleAdventureGame(root, SCREEN_WIDTH, SCREEN_HEIGHT, level=31)
+    # Level with boss: 6, 30, 40
+    game = TurtleAdventureGame(root, SCREEN_WIDTH, SCREEN_HEIGHT, level=1)
     game.start()
     root.mainloop()
