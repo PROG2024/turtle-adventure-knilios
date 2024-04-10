@@ -349,7 +349,154 @@ class ChasingEnemy(Enemy):
     def delete(self) -> None:
         self.canvas.delete(self.__id)
 
-class FencingEnemy:
+class FencingEnemy(Enemy):
+    """
+    Chasing enemy
+    """
+
+    def __init__(self,
+                 game: "TurtleAdventureGame",
+                 size: int,
+                 color: str, 
+                 speed: float = 1,
+                 side: float = 300,
+                 reverse: bool = False):
+        super().__init__(game, size, color, speed)
+        self.__index = 0
+        self.__to = []
+        s = side/2
+        h_x = self.game.home.x
+        h_y = self.game.home.y
+        self.__sides = [[h_x+s, h_y+s],[h_x+s, h_y-s],[h_x-s, h_y-s],[h_x-s, h_y+s]]
+        self.__reverse = reverse
+
+    def create(self) -> None:
+        pos = self.generate_spawn_loca()
+        self.__id = self.canvas.create_oval(0,0,0,0,fill=self.color)
+        self.x = pos[0]
+        self.y = pos[1]
+        self.render()
+
+    def update(self) -> None:
+        x = self.__sides[self.__index][0]
+        y = self.__sides[self.__index][1]
+        distance = math.sqrt((x-self.x)**2 + (y-self.y)**2)
+        self.x += self.speed * (x-self.x) / distance
+        self.y += self.speed * (y-self.y) / distance
+        if floor(self.x/self.speed/5) == floor(x/self.speed/5) and floor(self.y/self.speed/5) == floor(y/self.speed/5):
+            self.switch_place()
+        if self.hits_player():
+            self.game.game_over_lose()
+        
+
+    def render(self) -> None:
+        self.canvas.coords(self.__id, self.x-self.size/2, self.y -
+                            self.size/2, self.x+self.size, self.y+self.size)
+
+    def delete(self) -> None:
+        self.canvas.delete(self.__id)
+        
+    def switch_place(self):
+        if self.__reverse:
+            self.__index -= 1
+            if self.__index < 0:
+                self.__index = 3
+        else:
+            self.__index += 1
+            if self.__index > 3:
+                self.__index = 0
+        
+class BossEnemy(Enemy):
+    """
+    Boss enemy
+    """
+    def __init__(self,
+                 game: "TurtleAdventureGame",
+                 size: int,
+                 color: str, 
+                 speed: float = 1):
+        super().__init__(game, size, color, speed)
+
+    def create(self) -> None:
+        pos = self.generate_spawn_loca()
+        self.__id = self.canvas.create_oval(0,0,0,0,fill=self.color)
+        self.x = pos[0]
+        self.y = pos[1]
+        self.render()
+
+    def update(self) -> None:
+        distance = math.sqrt((self.game.player.x-self.x)**2 + (self.game.player.y-self.y)**2)
+        self.x += self.speed * (self.game.player.x-self.x) / distance
+        self.y += self.speed * (self.game.player.y-self.y) / distance
+        if random.randint(0,1) == 1:
+            new_enemy = Bullet(self.game, 10, 'black', self.x, self.y, 2)
+            self.game.add_enemy(new_enemy)
+            
+        if self.hits_player():
+            self.game.game_over_lose()
+            
+
+    def render(self) -> None:
+        self.canvas.coords(self.__id, self.x-self.size/2, self.y -
+                            self.size/2, self.x+self.size, self.y+self.size)
+
+    def delete(self) -> None:
+        self.canvas.delete(self.__id)
+        
+class Bullet(Enemy):
+    """
+    Chasing enemy
+    """
+    def __init__(self,
+                 game: "TurtleAdventureGame",
+                 size: int,
+                 color: str, 
+                 x:int,
+                 y:int,
+                 speed: float = 1,):
+        super().__init__(game, size, color, speed)
+        self.__speedx = 0
+        self.__speedy = 0
+        self.__acceleration = speed * 0.1
+        self.__x = x
+        self.__y = y
+
+    def create(self) -> None:
+        pos = [self.__x, self.__y]
+        self.__id = self.canvas.create_oval(0,0,0,0,fill=self.color)
+        self.x = pos[0]
+        self.y = pos[1]
+        self.render()
+
+    def update(self) -> None:
+        distance = math.sqrt((self.game.player.x-self.x)**2 + (self.game.player.y-self.y)**2)
+        self.__speedx += self.__acceleration * (self.game.player.x-self.x) / distance
+        self.__speedy += self.__acceleration * (self.game.player.y-self.y) / distance
+        # if abs(self.__speedx) > self.speed:
+        #     self.__speedx = self.__speedx / abs(self.__speedx) * 2
+        # if abs(self.__speedy) > self.speed:
+        #     self.__speedy = self.__speedy / abs(self.__speedy) * 2
+        self.x += self.__speedx
+        self.y += self.__speedy
+        if self.hits_player():
+            self.game.game_over_lose()
+        if self.x < 0 or self.x > self.game.winfo_width():
+            self.delete()
+            return 
+        if self.y < 0 or self.y > self.game.winfo_height():
+            self.delete()
+            return
+
+    def render(self) -> None:
+        self.canvas.coords(self.__id, self.x-self.size/2, self.y -
+                            self.size/2, self.x+self.size, self.y+self.size)
+
+    def delete(self) -> None:
+        self.canvas.delete(self.__id)
+        del self
+        self.ga
+        
+class OhioLastBossEnemy(Enemy):
     """
     Chasing enemy
     """
@@ -382,6 +529,7 @@ class FencingEnemy:
 
     def delete(self) -> None:
         self.canvas.delete(self.__id)
+            
 
 # TODO
 # Complete the EnemyGenerator class by inserting code to generate enemies
@@ -432,12 +580,17 @@ class EnemyGenerator:
             if choose == 1:
                 new_enemy = DemoEnemy(self.__game, 20, "red", 3)
             else:
-                new_enemy = ChasingEnemy(self.__game, 20, "green", self.game.get_speed(self.__level))
-            new_enemy.x = 100
-            new_enemy.y = 100
+                new_enemy = ChasingEnemy(self.__game, 20, "green", 3)
+            # new_enemy.x = 100
+            # new_enemy.y = 100
             self.game.add_enemy(new_enemy)
-            print(self.game.delta_time_formula(self.__level))
-            self.__game.after(self.game.delta_time_formula(self.__level), self.create_enemy)
+        if len(self.game.fencing_enemies) <= self.game.fencing_formula(self.__level):
+            new_enemy = FencingEnemy(self.__game, 20, "blue", 2, random.randint(100,200))
+            self.game.add_enemy(new_enemy)
+        if len(self.game.boss_enemies) <= self.game.boss_formula(self.__level):
+            new_enemy = BossEnemy(self.__game, 20, "black", 2)
+            self.game.add_enemy(new_enemy)
+        self.__game.after(self.game.delta_time_formula(self.__level), self.create_enemy)
 
 
 class TurtleAdventureGame(Game): # pylint: disable=too-many-ancestors
@@ -454,6 +607,9 @@ class TurtleAdventureGame(Game): # pylint: disable=too-many-ancestors
         self.player: Player
         self.home: Home
         self.enemies: list[Enemy] = []
+        self.fencing_enemies: list[Enemy] = []
+        self.boss_enemies: list[BossEnemy] = []
+        self.bullets: list[Bullet] = []
         self.enemy_generator: EnemyGenerator
         super().__init__(parent, 20)
 
@@ -475,13 +631,24 @@ class TurtleAdventureGame(Game): # pylint: disable=too-many-ancestors
 
         self.player.x = 50
         self.player.y = self.screen_height//2
+        
 
     def add_enemy(self, enemy: Enemy) -> None:
         """
         Add a new enemy into the current game
         """
-        self.enemies.append(enemy)
-        self.add_element(enemy)
+        if isinstance(enemy, FencingEnemy):
+            self.fencing_enemies.append(enemy)
+            self.add_element(enemy)
+        elif isinstance(enemy, BossEnemy):
+            self.boss_enemies.append(enemy)
+            self.add_element(enemy)
+        elif isinstance(enemy, Bullet):
+            self.bullets.append(enemy)
+            self.add_element(enemy)
+        else:
+            self.enemies.append(enemy)
+            self.add_element(enemy)
 
     def game_over_win(self) -> None:
         """
@@ -506,7 +673,7 @@ class TurtleAdventureGame(Game): # pylint: disable=too-many-ancestors
                                 text="Skill Issue",
                                 font=font,
                                 fill="red")
-        
+                
     @classmethod
     def enemy_formula(cls, level:int):
         return 20 * math.log10(level + 1)
