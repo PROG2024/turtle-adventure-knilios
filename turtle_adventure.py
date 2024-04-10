@@ -250,7 +250,7 @@ class Enemy(TurtleGameElement):
     @speed.setter
     def speed(self, new_speed: float):
         self.__speed = new_speed
-
+        
     def hits_player(self):
         """
         Check whether the enemy is hitting the player
@@ -310,7 +310,7 @@ class DemoEnemy(Enemy):
 
     def render(self) -> None:
         self.canvas.coords(self.__id, self.x-self.size/2, self.y -
-                            self.size/2, self.x+self.size, self.y+self.size)
+                            self.size/2, self.x+self.size/2, self.y+self.size/2)
 
     def delete(self) -> None:
         self.canvas.delete(self.__id)
@@ -344,7 +344,7 @@ class ChasingEnemy(Enemy):
 
     def render(self) -> None:
         self.canvas.coords(self.__id, self.x-self.size/2, self.y -
-                            self.size/2, self.x+self.size, self.y+self.size)
+                            self.size/2, self.x+self.size/2, self.y+self.size/2)
 
     def delete(self) -> None:
         self.canvas.delete(self.__id)
@@ -391,7 +391,7 @@ class FencingEnemy(Enemy):
 
     def render(self) -> None:
         self.canvas.coords(self.__id, self.x-self.size/2, self.y -
-                            self.size/2, self.x+self.size, self.y+self.size)
+                            self.size/2, self.x+self.size/2, self.y+self.size/2)
 
     def delete(self) -> None:
         self.canvas.delete(self.__id)
@@ -424,6 +424,10 @@ class BossEnemy(Enemy):
         self.y = pos[1]
         self.render()
 
+    @property
+    def id(self):
+        return self.__id
+
     def update(self) -> None:
         distance = math.sqrt((self.game.player.x-self.x)**2 + (self.game.player.y-self.y)**2)
         self.x += self.speed * (self.game.player.x-self.x) / distance
@@ -438,7 +442,7 @@ class BossEnemy(Enemy):
 
     def render(self) -> None:
         self.canvas.coords(self.__id, self.x-self.size/2, self.y -
-                            self.size/2, self.x+self.size, self.y+self.size)
+                            self.size/2, self.x+self.size/2, self.y+self.size/2)
 
     def delete(self) -> None:
         self.canvas.delete(self.__id)
@@ -460,7 +464,11 @@ class Bullet(Enemy):
         self.__acceleration = speed * 0.1
         self.__x = x
         self.__y = y
-
+    
+    @property
+    def id(self):
+        return self.__id
+    
     def create(self) -> None:
         pos = [self.__x, self.__y]
         self.__id = self.canvas.create_oval(0,0,0,0,fill=self.color)
@@ -481,20 +489,20 @@ class Bullet(Enemy):
         if self.hits_player():
             self.game.game_over_lose()
         if self.x < 0 or self.x > self.game.winfo_width():
-            self.delete()
+            self.game.bullets.pop(0)
+            self.game.delete_element(self)
             return 
         if self.y < 0 or self.y > self.game.winfo_height():
-            self.delete()
+            self.game.bullets.pop(0)
+            self.game.delete_element(self)
             return
 
     def render(self) -> None:
         self.canvas.coords(self.__id, self.x-self.size/2, self.y -
-                            self.size/2, self.x+self.size, self.y+self.size)
+                            self.size/2, self.x+self.size/2, self.y+self.size/2)
 
     def delete(self) -> None:
         self.canvas.delete(self.__id)
-        del self
-        self.ga
         
 class OhioLastBossEnemy(Enemy):
     """
@@ -525,7 +533,7 @@ class OhioLastBossEnemy(Enemy):
 
     def render(self) -> None:
         self.canvas.coords(self.__id, self.x-self.size/2, self.y -
-                            self.size/2, self.x+self.size, self.y+self.size)
+                            self.size/2, self.x+self.size/2, self.y+self.size/2)
 
     def delete(self) -> None:
         self.canvas.delete(self.__id)
@@ -587,9 +595,10 @@ class EnemyGenerator:
         if len(self.game.fencing_enemies) <= self.game.fencing_formula(self.__level):
             new_enemy = FencingEnemy(self.__game, 20, "blue", 2, random.randint(100,200))
             self.game.add_enemy(new_enemy)
-        if len(self.game.boss_enemies) <= self.game.boss_formula(self.__level):
-            new_enemy = BossEnemy(self.__game, 20, "black", 2)
-            self.game.add_enemy(new_enemy)
+        if self.game.boss_formula(self.__level):
+            if len(self.game.boss_enemies) <= self.game.get_boss_amount(self.__level):
+                new_enemy = BossEnemy(self.__game, 20, "black", 2)
+                self.game.add_enemy(new_enemy)
         self.__game.after(self.game.delta_time_formula(self.__level), self.create_enemy)
 
 
@@ -688,12 +697,14 @@ class TurtleAdventureGame(Game): # pylint: disable=too-many-ancestors
     
     @classmethod
     def delta_time_formula(cls, level:int) -> float:
-        print("enemy: ", cls.enemy_formula(level))
-        print("fencing: ", cls.fencing_formula(level))
         a = cls.enemy_formula(level) + cls.fencing_formula(level)
-        print("A: ", a)
         return round(5000 / a)
+    
+    @classmethod
+    def get_boss_amount(cls, level:int) -> int:
+        return int(round(-((1/1.02)**(level-35)) + 3)) - 1
     
     @classmethod
     def get_speed(cls, level):
         return (1.07)**(-level + 9) + 1.2
+    
